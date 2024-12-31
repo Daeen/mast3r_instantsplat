@@ -1,27 +1,27 @@
 #! /bin/bash
 
-GPU_ID=6
-DATA_ROOT_DIR="/ssd2/zhiwen/projects/InstantSplat/data"
+GPU_ID=0
+DATA_ROOT_DIR="/data/InstantSplat/collated_instantsplat_data/eval"
 DATASETS=(
     # TT
-    sora
+    # sora
     # mars
+    # MVimgNet
+    Mipnerf
     )
 
 SCENES=(
-    # Family
-    # Barn
-    # Francis
-    # Horse
-    # Ignatius
-    santorini
+    # bonsai
+    # bicycle
+    # flowers
+    garden
     )
 
 N_VIEWS=(
-    3
+    # 3
     # 5
     # 9
-    # 12
+    12
     )
 
 # increase iteration to get better metrics (e.g. gs_train_iter=5000)

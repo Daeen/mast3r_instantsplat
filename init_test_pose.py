@@ -4,17 +4,16 @@ import torch
 import numpy as np
 import argparse
 import time
-import roma
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 os.sys.path.append(os.path.abspath(os.path.join(BASE_DIR, "submodules", "dust3r")))
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
-from dust3r.inference import inference
-from dust3r.model import AsymmetricCroCo3DStereo
-from dust3r.utils.device import to_numpy
-from dust3r.image_pairs import make_pairs
-from dust3r.cloud_opt import global_aligner, GlobalAlignerMode
+from submodules.dust3r.dust3r.inference import inference
+from submodules.dust3r.dust3r.model import AsymmetricCroCo3DStereo
+from submodules.dust3r.dust3r.utils.device import to_numpy
+from submodules.dust3r.dust3r.image_pairs import make_pairs
+from submodules.dust3r.dust3r.cloud_opt import global_aligner, GlobalAlignerMode
 from utils.dust3r_utils import  (compute_global_alignment, load_images, storePly, save_colmap_cameras, save_colmap_images, 
                                  round_python3, rigid_points_registration)
 
@@ -33,7 +32,7 @@ def get_args_parser():
 
     parser.add_argument("--llffhold", type=int, default=2)
     parser.add_argument("--n_views", type=int, default=12)
-    parser.add_argument("--img_base_path", type=str, default="/home/workspace/datasets/instantsplat/Tanks_dust3r/Barn/24_views")
+    parser.add_argument("--img_base_path", type=str, default="/home/InstantSplat/collated_instantsplat_data/eval/Mipnerf/bicycle/24_views")
 
     return parser
 
@@ -58,12 +57,15 @@ if __name__ == '__main__':
     #################################################################################################################################################
 
 
-
+    # img_base_path = "/data/InstantSplat/collated_instantsplat_data/eval/Mipnerf/bicycle/24_views"
+    # all_img_folder = "/data/InstantSplat/collated_instantsplat_data/eval/Mipnerf/bicycle/24_views/dust3r_12_views/init_test_pose/images"
     # ---------------- (1) Prepare Train & Test images list ---------------- 
     all_img_list = sorted(os.listdir(os.path.join(img_base_path, "images")))
     if args.llffhold > 0:
         train_img_list = [c for idx, c in enumerate(all_img_list) if (idx+1) % args.llffhold != 0]
         test_img_list = [c for idx, c in enumerate(all_img_list) if (idx+1) % args.llffhold == 0]
+        print("train_img_list", train_img_list)
+        print("test_img_list", test_img_list)
     # sample sparse view
     indices = np.linspace(0, len(train_img_list) - 1, n_views, dtype=int)
     print(indices)
@@ -75,54 +77,64 @@ if __name__ == '__main__':
     train_pts_all_path = os.path.join(img_base_path, f"dust3r_{n_views}_views", "sparse/0", "pts_4_3dgs_all.npy")
     train_pts_all = np.load(train_pts_all_path)
     train_pts3d_m1 = train_pts_all
-    
+    # img_base_path = "/data/InstantSplat/collated_instantsplat_data/eval/Mipnerf/bicycle/24_views"
     if args.focal_avg:
         focal_path = os.path.join(img_base_path, f"dust3r_{n_views}_views", "sparse/0", "focal.npy")
-        preset_focal = np.load(focal_path)     # load focal calculated by dust3r_coarse_geometry_initialization
+        preset_focal = np.load(focal_path)
 
 
 
     #---------------- (3) Get N_views pointcloud and 12 test pose (define as n1) ---------------- 
-    if len(os.listdir(all_img_folder)) != len(test_img_list):
-        for img_name in test_img_list:
-            src_path = os.path.join(img_base_path, "images", img_name)
-            tgt_path = os.path.join(all_img_folder, "1_"+img_name)
-            print(src_path, tgt_path)
-            shutil.copy(src_path, tgt_path)
-    if len(os.listdir(all_img_folder)) != len(train_img_list):
-        for img_name in train_img_list:
-            src_path = os.path.join(img_base_path, "images", img_name)
-            tgt_path = os.path.join(all_img_folder, "0_"+img_name)
-            print(src_path, tgt_path)
-            shutil.copy(src_path, tgt_path)
-    
+    # if len(os.listdir(all_img_folder)) != len(test_img_list):
+    #     for img_name in test_img_list:
+    #         src_path = os.path.join(img_base_path, "images", img_name)
+    #         tgt_path = os.path.join(all_img_folder, "1_"+img_name)
+    #         print(src_path, tgt_path)
+    #         shutil.copy(src_path, tgt_path)
+    for img_name in test_img_list:
+        src_path = os.path.join(img_base_path, "images", img_name)
+        tgt_path = os.path.join(all_img_folder, "1_" + img_name)
+        print(src_path, tgt_path)
+        shutil.copy(src_path, tgt_path)
+    # if len(os.listdir(all_img_folder)) != len(train_img_list):
+    #     for img_name in train_img_list:
+    #         src_path = os.path.join(img_base_path, "images", img_name)
+    #         tgt_path = os.path.join(all_img_folder, "0_"+img_name)
+    #         print(src_path, tgt_path)
+    #         shutil.copy(src_path, tgt_path)
+    # Copy train images
+    for img_name in train_img_list:
+        src_path = os.path.join(img_base_path, "images", img_name)
+        tgt_path = os.path.join(all_img_folder, "0_" + img_name)
+        print(src_path, tgt_path)
+        shutil.copy(src_path, tgt_path)
     # # read all images
     # all_img_folder = os.path.join(img_base_path, "images")
     images, ori_size = load_images(all_img_folder, size=512)
     print("ori_size", ori_size)
-    pairs = make_pairs(images, scene_graph='complete', prefilter=None, symmetrize=True)    
+    pairs = make_pairs(images, scene_graph='complete', prefilter=None, symmetrize=True)
     output = inference(pairs, model, args.device, batch_size=batch_size)
     test_output_colmap_path=all_img_folder.replace("images", "sparse/0")
     os.makedirs(test_output_colmap_path, exist_ok=True)
 
     scene = global_aligner(output, device=args.device, mode=GlobalAlignerMode.PointCloudOptimizer)
-    loss = compute_global_alignment(scene, init="mst", niter=niter, schedule=schedule, lr=lr, focal_avg=args.focal_avg, known_focal=preset_focal[0][0])   
+    loss = compute_global_alignment(scene, init="mst", niter=niter, schedule=schedule, lr=lr, focal_avg=args.focal_avg, known_focal=preset_focal[0][0])
     all_poses = to_numpy(scene.get_im_poses())
     all_pts3d = to_numpy(scene.get_pts3d())
 
     # train_poses_n1 = [c for idx, c in enumerate(all_poses) if (idx+1) % args.llffhold != 0]    
     # train_pts3d_n1 = [c for idx, c in enumerate(all_pts3d) if (idx+1) % args.llffhold != 0]        
     # train_pts3d_n1 = [c for idx, c in enumerate(all_pts3d) if (idx+1) % args.llffhold != 0]     
-    train_pts3d_n1 = all_pts3d[:n_views] 
+    train_pts3d_n1 = all_pts3d[:n_views]
 
 
     # test_poses_n1 = [c for idx, c in enumerate(all_poses) if (idx+1) % args.llffhold == 0]
-    test_poses_n1 = all_poses[n_views:] 
+    test_poses_n1 = all_poses[n_views:]
 
     # all_poses_n1 =  np.array(to_numpy(all_poses))
     # train_poses_n1 =  np.array(to_numpy(train_poses_n1))
     train_pts3d_n1 = np.array(to_numpy(train_pts3d_n1)).reshape(-1,3)
-    test_poses_n1  = np.array(to_numpy(test_poses_n1))              # test_pose_n1: c2w
+    test_poses_n1  = np.array(to_numpy(test_poses_n1))  # test_pose_n1: c2w
 
 
 

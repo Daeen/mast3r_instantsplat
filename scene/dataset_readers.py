@@ -247,7 +247,9 @@ def readColmapSceneInfo(path, images, eval, args, opt, llffhold=2):
         test_cam_infos = []
         train_poses = sorted_poses
         test_poses = []
-
+    print(f"Number of training cameras: {len(train_cam_infos)}")
+    if len(train_cam_infos) == 0:
+        print("Error: train_cam_infos is empty.")
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     ply_path = os.path.join(path, "sparse/0/points3D.ply")

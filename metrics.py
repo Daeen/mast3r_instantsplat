@@ -30,6 +30,22 @@ from utils.utils_poses.vis_pose_utils import interp_poses_bspline, generate_spir
 from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec2rotmat, \
     read_extrinsics_binary, read_intrinsics_binary, read_points3D_binary, read_points3D_text
 
+def read_gt_pose_from_transforms_json(gt_pose_path):
+    import json
+
+    json_path = os.path.join(gt_pose_path, 'transforms_val.json')
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+
+    poses = []
+    for frame in data['frames']:
+        transform_matrix = np.array(frame['transform_matrix'], dtype=np.float32)
+        poses.append(transform_matrix)
+
+    poses = np.array(poses)
+    return poses
+
+
 def readImages(renders_dir, gt_dir):
     renders = []
     gts = []
@@ -90,6 +106,11 @@ def align_pose(pose1, pose2):
     mtx2 = mtx2 * s
 
     return mtx1, mtx2, R
+
+def convert_poses(poses):
+    # Flip the Y and Z axes
+    poses[:, :3, 1:3] *= -1
+    return poses
 
 def evaluate(args):
 
@@ -160,13 +181,15 @@ def evaluate(args):
             pose_path = Path(scene_dir) / 'pose'
             pose_ours = np.load(pose_path / f'pose_{args.iteration}.npy')
             pose_colmap = read_colmap_gt_pose(args.gt_pose_path)
+            # pose_colmap = read_gt_pose_from_transforms_json(args.gt_pose_path)
 
-            # sample sparse view
+            # Sample sparse view
             indices = np.linspace(0, pose_colmap.shape[0] - 1, args.n_views, dtype=int)
             print("\nCalculating pose metric, train_pose_idx: ", indices)
             tmp_pose_colmap = [pose_colmap[i] for i in indices]
             pose_colmap = tmp_pose_colmap
-            
+            # pose_colmap = pose_colmap[indices]
+            # pose_colmap = convert_poses(pose_colmap)
             
             # start to align
             pose_ours = torch.from_numpy(pose_ours)

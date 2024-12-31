@@ -168,7 +168,7 @@ def storePly(path, xyz, rgb):
 def R_to_quaternion(R):
     """
     Convert a rotation matrix to a quaternion.
-
+    R[3x3 matrix] -> [qw, qx, qy, qz]
     Parameters:
     - R: A 3x3 numpy array representing a rotation matrix.
 

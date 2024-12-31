@@ -1,40 +1,44 @@
 #! /bin/bash
 
-GPU_ID=1
-DATA_ROOT_DIR="/ssd2/zhiwen/projects/InstantSplat/data"
+GPU_ID=0
+DATA_ROOT_DIR="/home/InstantSplat/collated_instantsplat_data/eval"
 DATASETS=(
-    TT
-    # MVimgNet
+    # TT
+    MVimgNet
+    # Mipnerf
     )
 
 SCENES=(
-    # Barn
-    Family
-    # Francis
-    # Horse
-    # Ignatius
-    )
+    bicycle
+    # bonsai
+    # counter
+    # garden
+    # kitchen
+    # room
+    # stump
+    # treehill
+)
 
 N_VIEWS=(
     # 3
     # 5
-    9
-    # 12
+    # 9
+    12
     # 24
     )
 
 # increase iteration to get better metrics (e.g. gs_train_iter=5000)
-gs_train_iter=1000
+gs_train_iter=10000
 
 for DATASET in "${DATASETS[@]}"; do
     for SCENE in "${SCENES[@]}"; do
         for N_VIEW in "${N_VIEWS[@]}"; do
 
             # Sparse_image_folder must be Absolute path
-            Sparse_image_folder=${DATA_ROOT_DIR}/${DATASET}/${SCENE}/24_views
-            SOURCE_PATH=${Sparse_image_folder}/dust3r_${N_VIEW}_views
+            Sparse_image_folder=${DATA_ROOT_DIR}/${DATASET}/${SCENE}/24_views # access the 24_views folder
+            SOURCE_PATH=${Sparse_image_folder}/dust3r_${N_VIEW}_views # this folder will be created after running script
             MODEL_PATH=./output/eval/${DATASET}/${SCENE}/${N_VIEW}_views/
-            GT_POSE_PATH=${DATA_ROOT_DIR}/Tanks_colmap/${SCENE}/24_views
+            GT_POSE_PATH=${DATA_ROOT_DIR}/Mipnerf/${SCENE}/24_views
 
             # ----- (1) Dust3r_coarse_geometric_initialization -----
             CMD_D1="CUDA_VISIBLE_DEVICES=${GPU_ID} python ./coarse_init_eval.py \
